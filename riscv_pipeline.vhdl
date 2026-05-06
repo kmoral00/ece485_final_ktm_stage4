@@ -188,9 +188,9 @@ architecture Behavioral of riscv_pipeline is
             if_id_load_addr : inout STD_LOGIC;
             if_id_instr : inout  STD_LOGIC_VECTOR(31 downto 0);            
             -- <add other if_id registers>
-            if_id_reg1_data  : inout  STD_LOGIC_VECTOR(31 downto 0);
-            if_id_reg2_data  : inout  STD_LOGIC_VECTOR(31 downto 0);
-            if_id_imm        : inout  STD_LOGIC_VECTOR(31 downto 0);
+            if_id_reg1_data  : in  STD_LOGIC_VECTOR(31 downto 0);
+            if_id_reg2_data  : in  STD_LOGIC_VECTOR(31 downto 0);
+            if_id_imm        : in  STD_LOGIC_VECTOR(31 downto 0);
             if_id_alu_op : inout STD_LOGIC_VECTOR(3 downto 0);
             if_id_npc : inout STD_LOGIC_VECTOR(31 downto 0);
             if_id_rs1 : inout STD_LOGIC_VECTOR (4 downto 0);
@@ -271,7 +271,7 @@ architecture Behavioral of riscv_pipeline is
             if_id_rd       : in STD_LOGIC_VECTOR(4 downto 0);   -- previous instr destination register
             rs1      : in STD_LOGIC_VECTOR(4 downto 0);         -- current  instr source register
             rs2      : in STD_LOGIC_VECTOR(4 downto 0);         -- current  instr source register
-            id_ex_mem_read : in STD_LOGIC;
+            mem_wb_reg_write : in STD_LOGIC;
             -- need any other input registers?
             stall_counter  : in integer range 0 to 3 := 0;
             start_stall    : out STD_LOGIC;
@@ -471,7 +471,7 @@ begin
             if_id_rd       => if_id_rd,
             rs1      => instr(19 downto 15),
             rs2      => instr(24 downto 20),
-            id_ex_mem_read => id_ex_mem_read,
+            mem_wb_reg_write => mem_wb_reg_write,
             -- need any other input registers?
             stall_counter  => stall_counter,
             start_stall    => start_stall,
@@ -486,16 +486,19 @@ begin
                 stall_counter <= 0;
              elsif stall_counter > 0 then
                 stall_counter <= stall_counter - 1;
-             elsif start_stall = '1' then
+                
+          --   elsif start_stall = '1' and double_stall = '1' then --added line to account for double_stall
+          --      stall_counter <= 2; --added line to account for double stall
+                
+             elsif start_stall = '1' then 
                 --stall_counter <= 3;
                 --stall_counter <= 2;  -- needed to support BNE [after previous stall]
-                stall_counter <= 1;
+                stall_counter <= 2;
+                
             end if;
         end if;
     end process;
-
-    -- Stall signal
-   -- stall <= '1' when stall_counter > 0 else '0';        
+    
         
     -- forwarding unit
     forward_unit: forwarding_unit
@@ -539,9 +542,9 @@ begin
     -- Comparator 
     not_equal_flag <= '1' when (if_id_reg1_data /= if_id_reg2_data) else '0';
                                         
-    next_pc <=  pc when (start_stall = '1' or stall_counter > 1 or double_stall = '1') else   -- stall case, single and double
-                std_logic_vector(signed(if_id_imm)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and not_equal_flag = '1') else -- branch case, single stall
-               -- <math based on NPC and imm> when (<what control signals?>) else -- branch case, double stall
+    next_pc <=  pc when (start_stall = '1' or stall_counter > 2 or (double_stall = '1' and stall_counter > 1)) else   -- stall case, single and double
+                std_logic_vector(signed(if_id_npc)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and not_equal_flag = '1') else -- branch case, single stall
+                --std_logic_vector(signed(if_id_imm)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and ) else -- branch case, double stall
                 std_logic_vector(signed(if_id_npc)+signed(if_id_imm)) when (if_id_jump = '1') else  -- jump case
                 NPC;    
                 
@@ -558,8 +561,8 @@ begin
     --       11 forward from custom LoadAddr
     
     alu_input_a <= id_ex_reg1_data when mux_select_A = "00" else  
-                   id_ex_alu_result when mux_select_A = "01" else
-                   mem_wb_mem_data when mux_select_A = "10" else
+                   ex_mem_alu_result when mux_select_A = "01" else
+                   mem_wb_mem_data when mux_select_A = "10" else 
                    x"10000000";            
             
     -- mux to select alu input B (not used for forwarding for this program)
@@ -602,6 +605,6 @@ begin
     wb_data <= x"10000000" when (mem_wb_reg_write = '1' and mem_wb_load_addr = '1') else
                mem_wb_mem_data when (mem_wb_reg_write = '1' and mem_wb_mem_read = '1') else
                mem_wb_alu_result when (mem_wb_reg_write = '1') else
-               wb_data;     
+               (others => '0');     
 
 end Behavioral;

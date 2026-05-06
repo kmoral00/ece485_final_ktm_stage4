@@ -31,12 +31,13 @@ begin
   mux_select_A <= "00";
 
   -- EX hazard
-  if (id_ex_rs1 = ex_mem_rd and id_ex_rs1 = mem_wb_rd and mem_wb_mem_read = '0') then  -- alu to register case
+  if (id_ex_rs1 = mem_wb_rd) then  -- alu to register case
     mux_select_A <= "01";
   elsif (mem_wb_mem_read = '1') then  -- memory to register case
     mux_select_A <= "10";
   elsif (mem_wb_load_addr = '1') then  -- load address to register case
     mux_select_A <= "11";
   end if;
+  
     end process;
 end Behavioral;

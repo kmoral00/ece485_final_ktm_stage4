@@ -36,9 +36,9 @@ entity pipeline_registers is
         -- <add other if_id registers>
         if_id_npc : inout STD_LOGIC_VECTOR(31 downto 0);
         if_id_alu_op : inout STD_LOGIC_VECTOR(3 downto 0);
-        if_id_imm : inout STD_LOGIC_VECTOR(31 downto 0);
-        if_id_reg1_data : inout STD_LOGIC_VECTOR(31 downto 0);
-        if_id_reg2_data : inout STD_LOGIC_VECTOR(31 downto 0);
+        if_id_imm : in STD_LOGIC_VECTOR(31 downto 0);
+        if_id_reg1_data : in STD_LOGIC_VECTOR(31 downto 0);
+        if_id_reg2_data : in STD_LOGIC_VECTOR(31 downto 0);
         if_id_rs1 : inout STD_LOGIC_VECTOR (4 downto 0);
         if_id_rs2 : inout STD_LOGIC_VECTOR(4 downto 0);
         if_id_rd : inout STD_LOGIC_VECTOR(4 downto 0);
@@ -197,8 +197,9 @@ begin
                 if_id_rs1 <= (others => '0');
                 if_id_rs2 <= (others => '0');
                 if_id_rd <= (others => '0');
-    
-                -- <add other registers>                
+   
+                -- <add other registers>      
+
                                 
             else               -- when stall resumes, the old fetched instruction should still be there
                 if_id_reg_write <= reg_write;
