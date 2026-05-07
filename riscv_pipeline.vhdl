@@ -52,6 +52,7 @@ architecture Behavioral of riscv_pipeline is
     signal rs1, rs2, rd : STD_LOGIC_VECTOR(4 downto 0);
     signal wb_rd        : STD_LOGIC_VECTOR(4 downto 0);
     signal alu_op : STD_LOGIC_VECTOR(3 downto 0);
+
        
     -- Registers for pipeline stages
     signal if_id_npc, id_ex_npc, ex_mem_npc, mem_wb_npc             : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
@@ -164,6 +165,8 @@ architecture Behavioral of riscv_pipeline is
             reset       : in  STD_LOGIC;
             start_stall : in  STD_LOGIC;
             stall_counter : in integer;
+            not_equal_flag : in STD_LOGIC;
+            double_stall : in STD_LOGIC;
             
             -- IF/ID pipeline registers
             reg_write : in STD_LOGIC;
@@ -271,7 +274,10 @@ architecture Behavioral of riscv_pipeline is
             if_id_rd       : in STD_LOGIC_VECTOR(4 downto 0);   -- previous instr destination register
             rs1      : in STD_LOGIC_VECTOR(4 downto 0);         -- current  instr source register
             rs2      : in STD_LOGIC_VECTOR(4 downto 0);         -- current  instr source register
+            id_ex_mem_read : in STD_LOGIC;
             mem_wb_reg_write : in STD_LOGIC;
+            ex_mem_mem_read : in STD_LOGIC;
+            mem_wb_mem_read : in STD_LOGIC;
             -- need any other input registers?
             stall_counter  : in integer range 0 to 3 := 0;
             start_stall    : out STD_LOGIC;
@@ -284,6 +290,7 @@ architecture Behavioral of riscv_pipeline is
           ex_mem_reg_write : in STD_LOGIC;
           mem_wb_mem_read  : in STD_LOGIC;
           mem_wb_load_addr : in STD_LOGIC;
+          mem_wb_reg_write : in STD_LOGIC;
           ex_mem_rd        : in STD_LOGIC_VECTOR(4 downto 0);
           mem_wb_rd        : in STD_LOGIC_VECTOR(4 downto 0);
           id_ex_rs1        : in STD_LOGIC_VECTOR(4 downto 0);
@@ -302,6 +309,8 @@ begin
             clock_counter <= clock_counter + 1;
         end if;
     end process;
+    
+
 
     -- IF units and Control units ------------------------------------------------------
     
@@ -335,6 +344,8 @@ begin
             npc => npc,
             rd => instr(11 downto 7), --5 bits
             alu_op => alu_op,
+            not_equal_flag => not_equal_flag,
+            double_stall => double_stall,
             
             -- IF/ID pipeline registers
             if_id_reg_write => if_id_reg_write,
@@ -471,7 +482,10 @@ begin
             if_id_rd       => if_id_rd,
             rs1      => instr(19 downto 15),
             rs2      => instr(24 downto 20),
+            id_ex_mem_read => id_ex_mem_read,
             mem_wb_reg_write => mem_wb_reg_write,
+            ex_mem_mem_read => ex_mem_mem_read,
+            mem_wb_mem_read => mem_wb_mem_read,
             -- need any other input registers?
             stall_counter  => stall_counter,
             start_stall    => start_stall,
@@ -485,11 +499,7 @@ begin
             if reset = '1' then
                 stall_counter <= 0;
              elsif stall_counter > 0 then
-                stall_counter <= stall_counter - 1;
-                
-          --   elsif start_stall = '1' and double_stall = '1' then --added line to account for double_stall
-          --      stall_counter <= 2; --added line to account for double stall
-                
+                stall_counter <= stall_counter - 1;               
              elsif start_stall = '1' then 
                 --stall_counter <= 3;
                 --stall_counter <= 2;  -- needed to support BNE [after previous stall]
@@ -506,6 +516,7 @@ begin
             ex_mem_reg_write => ex_mem_reg_write,
             mem_wb_mem_read  => mem_wb_mem_read,
             mem_wb_load_addr => mem_wb_load_addr,
+            mem_wb_reg_write => mem_wb_reg_write,
             ex_mem_rd        => ex_mem_rd,
             mem_wb_rd        => mem_wb_rd,
             id_ex_rs1        => id_ex_rs1,
@@ -540,12 +551,14 @@ begin
             );
            
     -- Comparator 
-    not_equal_flag <= '1' when (if_id_reg1_data /= if_id_reg2_data) else '0';
+    not_equal_flag <= '1' when (ex_mem_alu_result /= if_id_reg2_data ) else '0'; --(id_ex_reg1_data /= id_ex_reg2_data or ex_mem_reg1_data /= ex_mem_reg2_data)
                                         
-    next_pc <=  pc when (start_stall = '1' or stall_counter > 2 or (double_stall = '1' and stall_counter > 1)) else   -- stall case, single and double
+    next_pc <= -- pc when (start_stall = '1' or stall_counter > 2 or (double_stall = '1' and stall_counter > 1)) else   -- stall case, single and double
+                pc when (start_stall = '1' or (double_stall = '1' and stall_counter > 1)) else
                 std_logic_vector(signed(if_id_npc)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and not_equal_flag = '1') else -- branch case, single stall
                 --std_logic_vector(signed(if_id_imm)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and ) else -- branch case, double stall
                 std_logic_vector(signed(if_id_npc)+signed(if_id_imm)) when (if_id_jump = '1') else  -- jump case
+                pc when (jump = '1') else
                 NPC;    
                 
     -- ID/EX pipeline registers

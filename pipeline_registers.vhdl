@@ -9,6 +9,9 @@ entity pipeline_registers is
         reset       : in  STD_LOGIC;
         start_stall : in  STD_LOGIC;
         stall_counter : in integer;
+        not_equal_flag : in STD_LOGIC;
+        double_stall : in STD_LOGIC;
+
 
         -- inputs from IF stage
         reg_write : in STD_LOGIC;
@@ -184,22 +187,22 @@ begin
             mem_wb_rd <= (others => '0');
             
         elsif rising_edge(clk) then
-            if (start_stall = '1' or stall_counter > 1) then  -- if stall, then insert a NOP 
-                if_id_reg_write <= '0';
-                if_id_alu_src <= '0';
-                if_id_mem_read <= '0';
-                if_id_mem_write <= '0';
-                if_id_branch <= '0';
-                if_id_jump <= '0';
-                if_id_load_addr <= '0';
-                if_id_instr <= (others => '0');
-                if_id_npc    <= (others => '0');
-                if_id_rs1 <= (others => '0');
-                if_id_rs2 <= (others => '0');
-                if_id_rd <= (others => '0');
-   
-                -- <add other registers>      
+            if (start_stall = '1') then
+                    if_id_reg_write <= '0';
+                    if_id_alu_src <= '0';
+                    if_id_mem_read <= '0';
+                    if_id_mem_write <= '0';
+                    if_id_branch <= '0';
+                    if_id_jump <= '0';
+                    if_id_load_addr <= '0';
+                    if_id_instr <= (others => '0');
+                    if_id_npc    <= (others => '0');
+                    if_id_rs1 <= (others => '0');
+                    if_id_rs2 <= (others => '0');
+                    if_id_rd <= (others => '0');
+        
 
+                -- <add other registers>      
                                 
             else               -- when stall resumes, the old fetched instruction should still be there
                 if_id_reg_write <= reg_write;
