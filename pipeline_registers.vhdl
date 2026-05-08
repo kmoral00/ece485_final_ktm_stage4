@@ -258,7 +258,7 @@ begin
             ex_mem_mem_write <= id_ex_mem_write;
             ex_mem_branch <= id_ex_branch;
             ex_mem_jump <= id_ex_jump;
-            
+
             mem_wb_reg_write <= ex_mem_reg_write;
             mem_wb_alu_result  <= ex_mem_alu_result;
             mem_wb_npc <= ex_mem_npc;
@@ -282,4 +282,4 @@ begin
 
         end if;
     end process;
-end Behavioral;
+   end Behavioral;

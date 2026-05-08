@@ -58,7 +58,7 @@ architecture Behavioral of riscv_pipeline is
     signal if_id_npc, id_ex_npc, ex_mem_npc, mem_wb_npc             : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal id_ex_alu_result, ex_mem_alu_result, mem_wb_alu_result   : STD_LOGIC_VECTOR(31 downto 0);
     signal if_id_alu_op, id_ex_alu_op, ex_mem_alu_op, mem_wb_alu_op : STD_LOGIC_VECTOR(3 downto 0);
-    signal if_id_imm, id_ex_imm, ex_mem_imm, mem_wb_imm             : STD_LOGIC_VECTOR(31 downto 0);
+    signal imm, if_id_imm, id_ex_imm, ex_mem_imm, mem_wb_imm             : STD_LOGIC_VECTOR(31 downto 0);
     signal if_id_instr, id_ex_instr, ex_mem_instr, mem_wb_instr     : STD_LOGIC_VECTOR(31 downto 0); 
     signal if_id_reg1_data, id_ex_reg1_data, ex_mem_reg1_data, mem_wb_reg1_data : STD_LOGIC_VECTOR(31 downto 0);
     signal if_id_reg2_data, id_ex_reg2_data, ex_mem_reg2_data, mem_wb_reg2_data : STD_LOGIC_VECTOR(31 downto 0);
@@ -543,22 +543,35 @@ begin
     if_id_reg1_data <= reg1_data;  
     if_id_reg2_data <= reg2_data;
          
-    -- Immediate generator
+  -- Immediate generator
         immediate_generator_inst: immediate_generator
             port map (
                 instr => if_id_instr,
                 imm   => if_id_imm
             );
-           
-    -- Comparator 
-    not_equal_flag <= '1' when (ex_mem_alu_result /= if_id_reg2_data ) else '0'; --(id_ex_reg1_data /= id_ex_reg2_data or ex_mem_reg1_data /= ex_mem_reg2_data)
-                                        
+            
+         immediate_generator_inst_2: immediate_generator
+                port map (
+                    instr => instr,
+                    imm   => imm
+                );
+               
+        -- Comparator 
+    --not_equal_flag <= '1' when (ex_mem_alu_result /= if_id_reg2_data ) else '0'; --(id_ex_reg1_data /= id_ex_reg2_data or ex_mem_reg1_data /= ex_mem_reg2_data)
+    not_equal_flag <= '1' when (ex_mem_alu_result /= ex_mem_reg2_data ) else '0';         
+                              
     next_pc <= -- pc when (start_stall = '1' or stall_counter > 2 or (double_stall = '1' and stall_counter > 1)) else   -- stall case, single and double
                 pc when (start_stall = '1' or (double_stall = '1' and stall_counter > 1)) else
-                std_logic_vector(signed(if_id_npc)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and not_equal_flag = '1') else -- branch case, single stall
+                --std_logic_vector(signed(if_id_npc)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and not_equal_flag = '1') else -- branch case, single stall
+               -- std_logic_vector(signed(npc)+shift_left(signed(imm),1)) when (branch = '1' and not_equal_flag = '1') else
+               
+               std_logic_vector(signed(npc)+shift_left(signed(imm),1)) when ((branch = '1' and not_equal_flag = '1') 
+                    and ((stall_counter = 2 and double_stall = '0') or (stall_counter = 1 and double_stall = '1'))) else
+                    
                 --std_logic_vector(signed(if_id_imm)+shift_left(signed(if_id_imm),1)) when (if_id_branch = '1' and ) else -- branch case, double stall
-                std_logic_vector(signed(if_id_npc)+signed(if_id_imm)) when (if_id_jump = '1') else  -- jump case
-                pc when (jump = '1') else
+               
+                std_logic_vector(signed(npc)+signed(imm)) when (jump = '1') else  -- jump case
+               -- pc when (jump = '1') else
                 NPC;    
                 
     -- ID/EX pipeline registers

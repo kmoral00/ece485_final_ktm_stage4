@@ -40,30 +40,38 @@ begin
             double_stall <= '0';
             
         -- stall cases, dependency on a (1)load from memory, (2) load_addr
-        elsif (if_id_rd = rs1 and (if_id_load_addr = '1' or if_id_mem_read = '1')) then -- single stall data dependency case 
-                start_stall <= '1';
+    --  elsif (if_id_rd = rs1 and (if_id_load_addr = '1' or if_id_mem_read = '1')) then -- single stall data dependency case 
+      --          start_stall <= '1';
                 
-       -- elsif (if_id_opcode = "0010011") then --(3) add, (4) addi/subi
-       --         and (<what control signals and/or opcodes?>)  -- stall data dependency case
-       --         and (if_id_opcode = "1100011")) then --BNE double stall --previous instr??
-        --         start_stall <= '1';
-                 --double_stall <= '1';
-                 
-        elsif (ex_mem_mem_read = '0' and mem_wb_mem_read = '1' and id_ex_mem_read = '0') then -- stall cases for branch or jump, needing time to calulate branch address, etc
-                start_stall <= '1'; 
-                double_stall <= '1';
+        elsif (if_id_mem_read = '1' or if_id_load_addr = '1') --or id_ex_opcode = "0110011" or id_ex_opcode = "0010011") 
+                              and ((if_id_rd = rs1) or (if_id_rd = rs2)) and (if_id_rd /= "00000") then -- single stall data dependency case
+                                start_stall <= '1';        
+ 
+ 
+      --  elsif (ex_mem_mem_read = '0' and mem_wb_mem_read = '1' and id_ex_mem_read = '0') then -- stall cases for branch or jump, needing time to calulate branch address, etc
+        --        start_stall <= '1'; 
+         --       double_stall <= '1';
+               -- double_stall <= '0';  --Part two 
+               
+          elsif (if_id_opcode = "0110011" or if_id_opcode = "0010011") --(3) add, (4) addi/subi
+                     and ((if_id_rd = rs1) or (if_id_rd = rs2)) and (if_id_rd /= "00000")  -- stall data dependency case
+                     and (opcode = "1100011") then --BNE double stall
+                           start_stall <= '1';
+                           double_stall <= '1';     
                 
+       
+--    elsif (opcode = "1101111" and opcode = "1100011") then  --for jump case and branch case if_id_opcode = "1100011"
+      --         start_stall <= '1';
+        --       double_stall <= '0';
+          elsif -- stall cases for branch or jump, needing time to calulate branch address, etc
+                      (stall_counter = 0 and (opcode = "1100011" or opcode = "1101111")) then 
+                        start_stall <= '1';  
+                        double_stall <= '0';   
                 
-       elsif (opcode = "1101111" and if_id_opcode = "1100011") then
-               start_stall <= '1';
-                
-
-
         elsif (stall_counter = 0) then
                 double_stall <= '0';
                 start_stall <= '0';
-                
-       --needed to add another to account for just jump case!!
+
         else        
                 start_stall <= '0';
         end if;    

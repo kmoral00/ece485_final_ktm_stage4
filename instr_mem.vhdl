@@ -15,31 +15,29 @@ end instr_mem;
 architecture Behavioral of instr_mem is
     type memory_array is array (0 to 255) of STD_LOGIC_VECTOR(31 downto 0);
     signal memory : memory_array := (
-        0 => x"00900293",                  -- addi x5, x0, 9         000000001001 00000 000 00101 0010011
-        1 => x"00000317",                  -- load_addr x6, array (custom instruction), where array is 0x10000000 
-      --  2 => x"00000013",                  --STALL
-      --  3 => x"00000013",                  --STALL
-      --  4 => x"00000013",                  --STALL
+--        0 => x"00900293",                  -- addi x5, x0, 9         000000001001 00000 000 00101 0010011
+--        1 => x"00000317",                  -- load_addr x6, array (custom instruction), where array is 0x10000000 
+--        2 => x"00032383",                  -- lw x7, 0(x6)      
+--        3 => x"00430313",                  -- loop: addi x6, x6, 4   
+--        4 => x"00032503",                 --lw x10, 0(x6)   L 
+--        5 => x"007503B3",                 --add x7, x10, x7 
+--        6 => x"00129293",                 --subi x5, x5, 1 (or   addi x5, x5, -1)  
+--        7 => x"FC029CE3",                   --bne 20
+--        8 => x"FF9FF06F", -- done: j done            [-4; note: assumes PC is already incremented by 4]
+        
+        
+--        --Reorder Instr
+        0 => x"00000317",                  -- load_addr x6, array (custom instruction), where array is 0x10000000 
+        1 => x"00900293",                  -- addi x5, x0, 9         000000001001 00000 000 00101 0010011
         2 => x"00032383",                  -- lw x7, 0(x6)      
         3 => x"00430313",                  -- loop: addi x6, x6, 4   
-      --  7 => x"00000013",                  --STALL
-      --  8 => x"00000013",                  --STALL
-      --  9 => x"00000013",                  --STALL 
-        4 => x"00032503",                 --lw x10, 0(x6)   
-      --  11 => x"00000013",                 --STALL
-       -- 12 => x"00000013",                 --STALL
-       -- 13 => x"00000013",                 --STALL 
-        5 => x"007503B3",                 --add x7, x10, x7 
-        6 => x"00129293",                 --subi x5, x5, 1 (or   addi x5, x5, -1)  
-      --  16 => x"00000013",                 --STALL
-      --  17 => x"00000013",                 --STALL
-      --  18 => x"00000013",                 --STALL
-      --  7 => x"F80298E3",                 --bne x5, x0, loop    change the bne from 20 to 4x14   
-        7 => x"FC029CE3",                   --bne 20
-      --  20 => x"00000013",                 --STALL
-       -- 21 => x"00000013",                 --STALL
-       -- 22 => x"00000013",                 --STALL 
-        8 => x"FF9FF06F", -- done: j done            [-4; note: assumes PC is already incremented by 4]
+        4 => x"00032503",                  --lw x10, 0(x6)   
+        5 => x"00129293",                  --subi x5, x5, 1 (or   addi x5, x5, -1)  
+        6 => x"007503B3",                  --add x7, x10, x7  
+        7 => x"FC029CE3",                  --bne 20
+        8 => x"FF9FF06F", -- done: j done            [-4; note: assumes PC is already incremented by 4]        
+
+        
         others => (others => '0')
     );
 begin
